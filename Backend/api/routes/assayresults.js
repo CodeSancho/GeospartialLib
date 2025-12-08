@@ -19,7 +19,7 @@ router.post('/', checkAuth, async (req, res) => {
     );
 
     res.status(201).json({ 
-      message: '✅ Assay result created', 
+      message: 'Assay result created', 
       result: result.rows[0] 
     });
   } catch (err) {
@@ -103,7 +103,7 @@ router.patch('/:id', checkAuth, async (req, res) => {
     }
     
     res.status(200).json({ 
-      message: '✅ Assay result updated', 
+      message: ' Assay result updated', 
       result: result.rows[0] 
     });
   } catch (err) {
@@ -126,7 +126,7 @@ router.delete('/:id', checkAuth, async (req, res) => {
     }
     
     res.status(200).json({ 
-      message: '✅ Assay result deleted', 
+      message: ' Assay result deleted', 
       deleted: result.rows[0] 
     });
   } catch (err) {
