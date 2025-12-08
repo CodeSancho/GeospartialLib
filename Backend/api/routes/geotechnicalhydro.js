@@ -33,7 +33,7 @@ router.post('/', checkAuth, async (req, res) => {
     );
 
     res.status(201).json({
-      message: '✅ Geotechnical/Hydro record created',
+      message: ' Geotechnical/Hydro record created',
       record: result.rows[0],
     });
   } catch (err) {
