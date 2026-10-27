@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const client = require('../database');
+const checkAuth = require('../middleware/check-auth');
 
 // --- PROJECT SUMMARY ---
-router.get('/project-summary', async (req, res) => {
+router.get('/project-summary', checkAuth, async (req, res) => {
   try {
     const result = await client.query('SELECT * FROM vw_project_summary');
     res.status(200).json(result.rows);
@@ -14,7 +15,7 @@ router.get('/project-summary', async (req, res) => {
 });
 
 // --- DRILLHOLES IN PROJECT ---
-router.get('/project/:id/drillholes', async (req, res) => {
+router.get('/project/:id/drillholes', checkAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await client.query(
@@ -29,7 +30,7 @@ router.get('/project/:id/drillholes', async (req, res) => {
 });
 
 // --- SAMPLES IN PROJECT ---
-router.get('/project/:id/samples', async (req, res) => {
+router.get('/project/:id/samples', checkAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await client.query(
@@ -44,7 +45,7 @@ router.get('/project/:id/samples', async (req, res) => {
 });
 
 // --- AVERAGE GRADES PER DRILLHOLE OR ELEMENT ---
-router.get('/avg-grades', async (req, res) => {
+router.get('/avg-grades', checkAuth, async (req, res) => {
   try {
     const result = await client.query('SELECT * FROM vw_avg_grade');
     res.status(200).json(result.rows);
@@ -55,15 +56,16 @@ router.get('/avg-grades', async (req, res) => {
 });
 
 // --- SAMPLE NEAREST DRILLHOLE (custom query, not in view yet) ---
-router.get('/sample/:id/nearest-drillhole', async (req, res) => {
+router.get('/sample/:id/nearest-drillhole', checkAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await client.query(
-      `SELECT d.drillhole_id, d.hole_id, ST_Distance(s.geom, d.geom) AS distance_meters
+      `SELECT d.drillhole_id, d.hole_id,
+              ST_Distance(s.geom::geography, d.geom::geography) AS distance_meters
        FROM Samples s
-       JOIN Drillholes d ON s.drillhole_id <> d.drillhole_id
-       WHERE s.sample_id = $1
-       ORDER BY s.geom <-> d.geom
+       JOIN Drillholes d ON s.drillhole_id <> d.drillhole_id AND d.geom IS NOT NULL
+       WHERE s.sample_id = $1 AND s.geom IS NOT NULL
+       ORDER BY s.geom::geography <-> d.geom::geography
        LIMIT 1`,
       [id]
     );

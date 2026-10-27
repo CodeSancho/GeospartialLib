@@ -8,14 +8,14 @@ router.post('/', checkAuth, async (req, res) => {
   try {
     const { sample_id, lithology, alteration, structure, notes } = req.body;
     
-    if (!sample_id) {
-      return res.status(400).json({ error: 'Sample ID is required' });
+    if (!Number.isInteger(Number(sample_id)) || Number(sample_id) < 1 || typeof lithology !== 'string' || !lithology.trim()) {
+      return res.status(400).json({ error: 'A valid sample ID and lithology are required' });
     }
 
     const result = await client.query(
       `INSERT INTO GeologyLogs (sample_id, lithology, alteration, structure, notes)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [sample_id, lithology, alteration, structure, notes]
+      [Number(sample_id), lithology.trim(), alteration || null, structure || null, notes || null]
     );
 
     res.status(201).json({ 

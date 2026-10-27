@@ -6,27 +6,30 @@ const checkAuth = require('../middleware/check-auth');
 // CREATE a project with optional polygon geometry
 router.post('/', checkAuth, async (req, res) => {
   try {
-    const { project_id, name, description, location, start_date, end_date, geom } = req.body;
+    const { name, description, location, start_date, end_date, geom } = req.body;
 
-    if (!name || !description || !location) {
+    if (typeof name !== 'string' || !name.trim() || typeof description !== 'string' || !description.trim() || typeof location !== 'string' || !location.trim()) {
       return res.status(400).json({
         error: 'Project name, description, and location are required',
       });
     }
+    if (start_date && end_date && new Date(end_date) < new Date(start_date)) {
+      return res.status(400).json({ error: 'End date must be on or after the start date' });
+    }
 
     // Insert with or without geom
     const result = await client.query(
-  `INSERT INTO Projects (project_id, name, description, location, start_date, end_date, geom)
-   VALUES ($1, $2, $3, $4, $5, $6,
+      `INSERT INTO Projects (name, description, location, start_date, end_date, geom)
+   VALUES ($1, $2, $3, $4, $5,
      CASE 
-       WHEN $7::text IS NOT NULL 
-       THEN ST_SetSRID(ST_GeomFromGeoJSON($7::text), 4326)
+       WHEN $6::text IS NOT NULL 
+       THEN ST_SetSRID(ST_GeomFromGeoJSON($6::text), 4326)
        ELSE NULL
      END
    )
    RETURNING project_id, name, description, location, start_date, end_date,
              ST_AsGeoJSON(geom) AS geom`,
-  [project_id, name, description, location, start_date, end_date, geom]
+  [name.trim(), description.trim(), location.trim(), start_date || null, end_date || null, typeof geom === 'object' && geom !== null ? JSON.stringify(geom) : geom || null]
 );
 
     res.status(201).json({
@@ -56,7 +59,7 @@ router.get('/', checkAuth, async (req, res) => {
 });
 
 // READ ONE project by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', checkAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await client.query(

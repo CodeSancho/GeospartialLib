@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, Layers, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, Edit, Trash2, Layers, AlertCircle, CheckCircle, Download } from 'lucide-react';
 import Modal from "../components/Modal";
 import ProjectForm from "../components/ProjectForm";
-
-const API_BASE_URL = 'http://localhost:5000';
+import { API_BASE_URL, downloadCsv } from '../lib/api';
 
 const api = {
   headers: (token) => ({
@@ -16,10 +15,12 @@ const api = {
       const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: this.headers(token),
       });
-      return await res.json();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not load projects');
+      return data;
     } catch (error) {
       console.error('API Get Error:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -225,6 +226,7 @@ const ProjectsView = ({ token }) => {
         <Layers size={20} />
         Add New Project
       </button>
+      <button onClick={() => downloadCsv('projects.csv', projects)} disabled={!projects.length} className="mb-4 ml-2 inline-flex items-center gap-2 rounded-lg border border-white/50 bg-white px-4 py-3 font-semibold text-teal-900 disabled:opacity-50"><Download size={18} />Export CSV</button>
 
       {/* CREATE/EDIT PROJECT MODAL */}
       <Modal
@@ -342,7 +344,6 @@ const ProjectsView = ({ token }) => {
                 <th className="px-6 py-4 text-left text-xs font-bold text-teal-800 uppercase tracking-wider">Project Name</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-teal-800 uppercase tracking-wider">Location</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-teal-800 uppercase tracking-wider">Start Date</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-teal-800 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-right text-xs font-bold text-teal-800 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -366,12 +367,6 @@ const ProjectsView = ({ token }) => {
                     {project.start_date
                       ? new Date(project.start_date).toLocaleDateString()
                       : '-'}
-                  </td>
-
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                      Active
-                    </span>
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap text-right space-x-2">

@@ -3,37 +3,45 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const client = require('../database');
 const router = express.Router();
+const checkAuth = require('../middleware/check-auth');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret'; // default for dev
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Register
 router.post('/register', async (req, res) => {
   try {
-    let { username, email, password, role } = req.body;
-    if (!username || !email || !password) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    let { username, email, password } = req.body;
+    username = typeof username === 'string' ? username.trim() : '';
+    email = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    if (!username || !email || typeof password !== 'string') {
+      return res.status(400).json({ error: 'Username, email, and password are required' });
     }
-
-    email = email.toLowerCase();
+    if (username.length > 80 || email.length > 254 || !/^\S+@\S+\.\S+$/.test(email)) {
+      return res.status(400).json({ error: 'Enter a valid username and email address' });
+    }
+    if (password.length < 8 || password.length > 128) {
+      return res.status(400).json({ error: 'Password must be between 8 and 128 characters' });
+    }
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const result = await client.query(
       `INSERT INTO Users (username, email, password_hash, role)
        VALUES ($1, $2, $3, $4) RETURNING user_id, username, email, role, created_at`,
-      [username, email, hashedPassword, role || 'user']
+      [username, email, hashedPassword, 'user']
     );
 
-    res.status(201).json({ message: 'User registered', user: result.rows[0] });
+    res.status(201).json({ success: true, message: 'User registered', user: result.rows[0] });
   } catch (err) {
     console.error('Register error:', err.message);
-    res.status(500).json({ error: 'Database error' });
+    if (err.code === '23505') return res.status(409).json({ error: 'An account with that email already exists' });
+    res.status(500).json({ error: 'Unable to register user' });
   }
 });
 
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const email = (req.body.email || '').toLowerCase();
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
     const password = req.body.password;
 
     if (!email || !password)
@@ -66,7 +74,17 @@ router.post('/login', async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    res.status(200).json({ success:true, message: 'Login successful', token });
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        user_id: user.user_id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (err) {
     console.error('Login error:', err.message);
     res.status(500).json({ error: 'Database error' });
@@ -74,20 +92,9 @@ router.post('/login', async (req, res) => {
 });
 
 // Profile (protected)
-router.get('/profile', async (req, res) => {
+router.get('/profile', checkAuth, async (req, res) => {
   try {
-    const authHeader =
-      req.headers['authorization'] || req.headers['Authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'No token provided' });
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (err) {
-      return res.status(403).json({ error: 'Invalid token' });
-    }
-
+    const decoded = req.user;
     const result = await client.query(
       `SELECT user_id, username, email, role, created_at FROM Users WHERE user_id = $1`,
       [decoded.user_id]
@@ -103,19 +110,9 @@ router.get('/profile', async (req, res) => {
 });
 
 // Update Profile (protected)
-router.patch('/profile', async (req, res) => {
+router.patch('/profile', checkAuth, async (req, res) => {
   try {
-    const authHeader =
-      req.headers['authorization'] || req.headers['Authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'No token provided' });
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (err) {
-      return res.status(403).json({ error: 'Invalid token' });
-    }
+    const decoded = req.user;
 
     const { username, email, currentPassword, newPassword } = req.body;
     const userId = decoded.user_id;
@@ -179,20 +176,8 @@ router.patch('/profile', async (req, res) => {
 });
 
 // Logout (protected)
-router.post('/logout', async (req, res) => {
+router.post('/logout', checkAuth, async (req, res) => {
   try {
-    const authHeader =
-      req.headers['authorization'] || req.headers['Authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'No token provided' });
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (err) {
-      return res.status(403).json({ error: 'Invalid token' });
-    }
-
     // Token is valid; client should remove it from localStorage
     res.status(200).json({ message: 'Logout successful' });
   } catch (err) {

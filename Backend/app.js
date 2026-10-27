@@ -2,16 +2,13 @@ const express = require('express');
 const app = express();
 require('dotenv').config({ debug: false });
 const morgan = require('morgan');
-const bodyParser = require('body-parser');
-const jwt = require('jsonwebtoken');
 const cors = require('cors');
 
 const projectsRoutes = require('./api/routes/projects');
 const samplesRoutes = require('./api/routes/samples');
 const drillholesRoutes = require('./api/routes/drillholes');
 //const importRoutes = require('./api/routes/import');
-//const reportsRoutes = require('./api/routes/reports');
-//const exportGeoRoutes = require('./api/routes/exportGeo');
+const reportsRoutes = require('./api/routes/reports');
 const usersRoutes = require('./api/routes/users');
 const adminRoutes = require('./api/routes/admin');
 const assayresultsRoutes = require('./api/routes/assayresults');
@@ -23,9 +20,8 @@ const samplePropertiesRoutes = require('./api/routes/sampleProperties');
 
 
 app.use(morgan('dev'));
-app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false }));
 app.use(cors());
 
 //  app.use((req, res, next) => {
@@ -41,8 +37,7 @@ app.use('/projects', projectsRoutes);
 app.use('/samples', samplesRoutes);
 app.use('/drillholes', drillholesRoutes);
 //app.use('/import', importRoutes);
-//app.use('/reports', reportsRoutes);
-//app.use('/export', exportGeoRoutes);
+app.use('/reports', reportsRoutes);
 app.use('/users', usersRoutes);
 app.use('/admin', adminRoutes);
 app.use('/assayresults', assayresultsRoutes);

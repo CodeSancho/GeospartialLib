@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { Input, TextArea } from "./Input";   // <-- FIXED
-import Button from "./Button";               // <-- FIXED
+import { Input, TextArea } from "./Input";
+import Button from "./Button";
 import { Save, X } from 'lucide-react';
 
 const ProjectForm = ({ project, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
-    project_id: project?.project_id || '',
     name: project?.name || '',
     description: project?.description || '',
     location: project?.location || '',
-    start_date: project?.start_date || '',
-    end_date: project?.end_date || ''
+    start_date: project?.start_date?.split('T')[0] || '',
+    end_date: project?.end_date?.split('T')[0] || '',
+    geom: typeof project?.geom === 'string' ? project.geom : project?.geom ? JSON.stringify(project.geom) : '',
   });
 
   const [errors, setErrors] = useState({});
@@ -27,10 +27,16 @@ const ProjectForm = ({ project, onSubmit, onCancel }) => {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.id = 'Project id is required';
     if (!formData.name.trim()) newErrors.name = 'Project name is required';
     if (!formData.location.trim()) newErrors.location = 'Location is required';
     if (!formData.description.trim()) newErrors.description = 'Description is required';
+    if (formData.start_date && formData.end_date && formData.end_date < formData.start_date) newErrors.end_date = 'End date must be on or after the start date';
+    if (formData.geom.trim()) {
+      try {
+        const geometry = JSON.parse(formData.geom);
+        if (!geometry || !['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon'].includes(geometry.type)) newErrors.geom = 'Use a Point, LineString, or Polygon GeoJSON geometry';
+      } catch { newErrors.geom = 'Enter valid GeoJSON geometry'; }
+    }
     return newErrors;
   };
 
@@ -45,7 +51,7 @@ const ProjectForm = ({ project, onSubmit, onCancel }) => {
 
     setLoading(true);
     try {
-      await onSubmit(formData);
+      await onSubmit({ ...formData, geom: formData.geom.trim() || null });
     } catch (error) {
       console.error('Form submission error:', error);
     } finally {
@@ -55,16 +61,6 @@ const ProjectForm = ({ project, onSubmit, onCancel }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
- <Input
-        label="Project id"
-        name="id"
-        value={formData.id}
-        onChange={handleChange}
-        error={errors.name}
-        required
-        placeholder="e.g., 1, 2, 3"
-      />
-
       <Input
         label="Project Name"
         name="name"
@@ -110,8 +106,12 @@ const ProjectForm = ({ project, onSubmit, onCancel }) => {
           type="date"
           value={formData.end_date}
           onChange={handleChange}
+          error={errors.end_date}
         />
       </div>
+
+      <TextArea label="Boundary geometry (optional GeoJSON)" name="geom" value={formData.geom} onChange={handleChange} error={errors.geom} placeholder='{"type":"Polygon","coordinates":[...]}' />
+      <p className="-mt-2 text-xs text-gray-500">Coordinates must use longitude, latitude in WGS84 (EPSG:4326).</p>
 
       <div className="flex gap-3 pt-4">
         <Button
