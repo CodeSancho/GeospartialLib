@@ -7,12 +7,12 @@ const DrillholeForm = ({ drillhole, projects = [], onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
     project_id: drillhole?.project_id || '',
     hole_id: drillhole?.hole_id || '',
-    easting: drillhole?.easting || '',
-    northing: drillhole?.northing || '',
-    elevation: drillhole?.elevation || '',
-    max_depth: drillhole?.max_depth || '',
-    azimuth: drillhole?.azimuth || '',
-    dip: drillhole?.dip || '',
+    easting: drillhole?.easting ?? '',
+    northing: drillhole?.northing ?? '',
+    elevation: drillhole?.elevation ?? '',
+    max_depth: drillhole?.max_depth ?? '',
+    azimuth: drillhole?.azimuth ?? '',
+    dip: drillhole?.dip ?? '',
     coordinate_system: drillhole?.coordinate_system || '',
     status: drillhole?.status || 'planned',
     start_date: drillhole?.start_date ? drillhole.start_date.split('T')[0] : '',
@@ -34,8 +34,8 @@ const DrillholeForm = ({ drillhole, projects = [], onSubmit, onCancel }) => {
     const newErrors = {};
     if (!formData.project_id) newErrors.project_id = 'Project is required';
     if (!formData.hole_id.trim()) newErrors.hole_id = 'Hole ID is required';
-    if (!formData.easting) newErrors.easting = 'Easting is required';
-    if (!formData.northing) newErrors.northing = 'Northing is required';
+    if (formData.easting === '' || formData.easting == null) newErrors.easting = 'Easting is required';
+    if (formData.northing === '' || formData.northing == null) newErrors.northing = 'Northing is required';
     
     // Validate numeric ranges
     if (formData.azimuth && (formData.azimuth < 0 || formData.azimuth > 360)) {
@@ -236,6 +236,7 @@ const DrillholeForm = ({ drillhole, projects = [], onSubmit, onCancel }) => {
           placeholder="e.g., WGS84, UTM Zone 35S"
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors text-gray-800 placeholder-gray-400"
         />
+        <p className="mt-1 text-xs text-gray-500">To plot this hole on the map, select WGS84 and enter longitude as easting and latitude as northing.</p>
       </div>
 
       {/* Status Dropdown */}

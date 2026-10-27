@@ -1,96 +1,32 @@
-import React from 'react';
-import { 
-  Menu, X, BarChart3, Layers, MapPin, 
-  Database, Beaker, FileText, Activity, 
-  Settings, LogOut 
-} from 'lucide-react';
+import { Activity, BarChart3, Beaker, Database, FileText, Globe2, Layers, LogOut, MapPin, Menu, X } from 'lucide-react';
+import { useAuth } from '../context/authContext';
 
-export const Sidebar = ({ isOpen, setIsOpen, currentView, setCurrentView }) => {
-  const navItems = [
-    { id: 'dashboard', label: 'Main', icon: BarChart3 },
-    { id: 'projects', label: 'Projects', icon: Layers },
-    { id: 'drillholes', label: 'Drillholes', icon: MapPin },
-    { id: 'samples', label: 'Samples', icon: Database },
-    { id: 'assays', label: 'Assays', icon: Beaker },
-    { id: 'geology', label: 'Geology Logs', icon: FileText },
-    { id: 'analytics', label: 'Analytics', icon: Activity }
-  ];
-  
+const navItems = [
+  { id: 'dashboard', label: 'Overview', icon: BarChart3 },
+  { id: 'map', label: 'Spatial map', icon: Globe2 },
+  { id: 'projects', label: 'Projects', icon: Layers },
+  { id: 'drillholes', label: 'Drillholes', icon: MapPin },
+  { id: 'samples', label: 'Samples', icon: Database },
+  { id: 'assays', label: 'Assay results', icon: Beaker },
+  { id: 'geology', label: 'Geology logs', icon: FileText },
+  { id: 'analytics', label: 'Analytics', icon: Activity },
+];
+
+export function Sidebar({ isOpen, setIsOpen, currentView, setCurrentView }) {
+  const { logout } = useAuth();
   return (
     <>
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-      
-      {/* Sidebar */}
-      <div className={`
-        fixed lg:static inset-y-0 left-0 z-50
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        ${isOpen ? 'w-64' : 'lg:w-20'}
-        bg-gradient-to-b from-teal-900 to-teal-800
-        text-white transition-all duration-300 flex flex-col shadow-2xl
-      `}>
-        {/* Header */}
-        <div className="p-4 flex items-center justify-between border-b border-teal-700">
-          {isOpen && (
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                <Layers className="text-teal-900" size={24} />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold">Mining DMS</h1>
-                <p className="text-xs text-teal-200">Data Management</p>
-              </div>
-            </div>
-          )}
-          <button 
-            onClick={() => setIsOpen(!isOpen)} 
-            className="p-2 hover:bg-teal-700 rounded-lg transition-colors"
-          >
-            {isOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+      {isOpen && <button aria-label="Close navigation" className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setIsOpen(false)} />}
+      <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-gradient-to-b from-teal-950 to-teal-800 text-white shadow-2xl transition-transform duration-300 md:static md:translate-x-0 ${isOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:w-20'}`}>
+        <div className="flex items-center justify-between border-b border-white/10 p-4">
+          {isOpen && <div><h1 className="font-bold">Mining DMS</h1><p className="text-xs text-teal-200">Geospatial data</p></div>}
+          <button aria-label="Toggle navigation" onClick={() => setIsOpen((open) => !open)} className="rounded-lg p-2 hover:bg-white/10">{isOpen ? <X size={20} /> : <Menu size={20} />}</button>
         </div>
-        
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
-          {navItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setCurrentView(item.id)}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
-                currentView === item.id 
-                  ? 'bg-white text-teal-900 shadow-lg transform scale-105' 
-                  : 'hover:bg-teal-700 text-white'
-              }`}
-            >
-              <item.icon size={20} />
-              {isOpen && <span className="font-medium">{item.label}</span>}
-            </button>
-          ))}
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+          {navItems.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => { setCurrentView(id); if (window.innerWidth < 768) setIsOpen(false); }} aria-current={currentView === id ? 'page' : undefined} title={!isOpen ? label : undefined} className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm transition ${currentView === id ? 'bg-white font-semibold text-teal-900' : 'text-white/90 hover:bg-white/10'}`}><Icon size={19} />{isOpen && <span>{label}</span>}</button>)}
         </nav>
-        
-        {/* Footer */}
-        <div className="p-4 border-t border-teal-700">
-          <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-teal-700 transition-colors">
-            <Settings size={20} />
-            {isOpen && <span>Settings</span>}
-          </button>
-          <button 
-            onClick={() => {
-              localStorage.removeItem('token');
-              window.location.href = '/login';
-            }}
-            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-600 transition-colors mt-2"
-          >
-            <LogOut size={20} />
-            {isOpen && <span>Logout</span>}
-          </button>
-        </div>
-      </div>
+        <div className="border-t border-white/10 p-3"><button onClick={() => { logout(); window.location.assign('/login'); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm text-white/90 hover:bg-red-700"><LogOut size={19} />{isOpen && <span>Sign out</span>}</button></div>
+      </aside>
     </>
   );
-};
+}

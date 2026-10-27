@@ -7,15 +7,19 @@ import DrillholesView from '../views/DrillholeView';
 import MineImg from '../assets/Mine.jpg';
 import { useAuth } from '../context/authContext'
 import SamplesView from '../views/SamplesView';
+import RecordsView from '../views/RecordsView';
+import SpatialMapView from '../views/SpatialMapView';
+import AnalyticsView from '../views/AnalyticsView';
 
 export default function MainDashboard() {
   const { user } = useAuth(); 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [currentView, setCurrentView] = useState("dashboard");
   const [token] = useState(localStorage.getItem("token"));
 
   const viewTitles = {
     dashboard: "Main",
+    map: "Spatial map",
     projects: "Projects",
     drillholes: "Drillholes",
     samples: "Samples",
@@ -28,17 +32,23 @@ export default function MainDashboard() {
     switch (currentView) {
       case "dashboard":
         return <DashboardView token={token} />;
+      case "map":
+        return <SpatialMapView token={token} />;
       case "projects":
         return <ProjectsView token={token} />;
       case "drillholes":
         return <DrillholesView token={token} />;
         case "samples":
         return <SamplesView token={token} />;
+      case "assays":
+        return <RecordsView token={token} kind="assays" />;
+      case "geology":
+        return <RecordsView token={token} kind="geology" />;
+      case "analytics":
+        return <AnalyticsView token={token} />;
       default:
         return (
-          <div className="text-center py-12 text-white/80 text-lg">
-            Coming soon...
-          </div>
+          <div className="rounded-xl bg-white p-8 text-center text-slate-700">Select a section from the navigation.</div>
         );
     }
   };
@@ -55,7 +65,7 @@ export default function MainDashboard() {
       <div className="relative flex w-full h-full z-10">
         
         {/* Sidebar */}
-        <div className="hidden md:flex m-4">
+        <div className="fixed inset-y-0 left-0 z-40 md:static md:m-4">
           <Sidebar
             isOpen={sidebarOpen}
             setIsOpen={setSidebarOpen}
@@ -68,7 +78,7 @@ export default function MainDashboard() {
         <div className="flex-1 flex flex-col">
           {/* Header */}
           <div className="m-4">
-            <Header title={viewTitles[currentView]} setIsOpen={setSidebarOpen} />
+            <Header title={viewTitles[currentView]} setIsOpen={setSidebarOpen} user={user} />
           </div>
 
           {/* Main view content */}

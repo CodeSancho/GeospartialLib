@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, MapPin, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, Edit, Trash2, MapPin, AlertCircle, CheckCircle, Download } from 'lucide-react';
 import Modal from '../components/Modal';
 import DrillholeForm from '../components/DrillholeForm';
+import { API_BASE_URL, downloadCsv } from '../lib/api';
 
-const API_BASE_URL = 'http://localhost:5000';
 
 const api = {
   headers: (token) => ({
@@ -16,10 +16,12 @@ const api = {
       const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: this.headers(token)
       });
-      return await res.json();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not load drillholes');
+      return data;
     } catch (error) {
       console.error('API Get Error:', error);
-      return [];
+      throw error;
     }
   },
 
@@ -241,6 +243,7 @@ const DrillholesView = ({ token }) => {
         <MapPin size={20} />
         Add New Drillhole
       </button>
+      <button onClick={() => downloadCsv('drillholes.csv', drillholes)} disabled={!drillholes.length} className="mb-4 ml-2 inline-flex items-center gap-2 rounded-lg border border-white/50 bg-white px-4 py-3 font-semibold text-teal-900 disabled:opacity-50"><Download size={18} />Export CSV</button>
 
       {/* CREATE/EDIT DRILLHOLE MODAL */}
       <Modal

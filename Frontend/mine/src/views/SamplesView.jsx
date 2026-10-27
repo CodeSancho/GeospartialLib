@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, Edit, Trash2, AlertCircle, CheckCircle, Download } from 'lucide-react';
 import Modal from '../components/Modal';
 import SampleForm from '../components/SampleForm';
-
-const API_BASE_URL = 'http://localhost:5000';
+import { API_BASE_URL, downloadCsv } from '../lib/api';
 
 const api = {
   headers: (token) => ({
@@ -13,10 +12,12 @@ const api = {
   async get(endpoint, token) {
     try {
       const res = await fetch(`${API_BASE_URL}${endpoint}`, { headers: this.headers(token) });
-      return await res.json();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
     } catch (error) {
       console.error('API Get Error:', error);
-      return [];
+      throw error;
     }
   },
   async post(endpoint, body, token) {
@@ -26,7 +27,9 @@ const api = {
         headers: this.headers(token),
         body: JSON.stringify(body),
       });
-      return await res.json();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
     } catch (error) {
       console.error('API Post Error:', error);
       return null;
@@ -39,7 +42,9 @@ const api = {
         headers: this.headers(token),
         body: JSON.stringify(body),
       });
-      return await res.json();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
     } catch (error) {
       console.error('API Patch Error:', error);
       return null;
@@ -51,7 +56,9 @@ const api = {
         method: 'DELETE',
         headers: this.headers(token),
       });
-      return await res.json();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
     } catch (error) {
       console.error('API Delete Error:', error);
       return null;
@@ -61,6 +68,7 @@ const api = {
 
 const SamplesView = ({ token }) => {
   const [samples, setSamples] = useState([]);
+  const [drillholes, setDrillholes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSample, setSelectedSample] = useState(null);
@@ -71,8 +79,9 @@ const SamplesView = ({ token }) => {
   const loadSamples = async () => {
     setLoading(true);
     try {
-      const data = await api.get('/samples', token);
+      const [data, holes] = await Promise.all([api.get('/samples', token), api.get('/drillholes', token)]);
       setSamples(Array.isArray(data) ? data : []);
+      setDrillholes(Array.isArray(holes) ? holes : []);
     } catch {
       showNotification('Failed to load samples', 'error');
     } finally {
@@ -105,11 +114,14 @@ const SamplesView = ({ token }) => {
   };
 
   const handleDelete = async (sample) => {
-    const result = await api.delete(`/samples/${sample.sample_id}`, token);
-    if (result?.deleted) {
-      setSamples(prev => prev.filter(s => s.sample_id !== sample.sample_id));
-      showNotification('Sample deleted successfully', 'success');
-    } else showNotification('Failed to delete sample', 'error');
+    if (!window.confirm(`Delete sample ${sample.sample_code || sample.sample_id}?`)) return;
+    try {
+      const result = await api.delete(`/samples/${sample.sample_id}`, token);
+      if (result?.deleted) {
+        setSamples(prev => prev.filter(s => s.sample_id !== sample.sample_id));
+        showNotification('Sample deleted successfully', 'success');
+      }
+    } catch (error) { showNotification(error.message || 'Failed to delete sample', 'error'); }
   };
 
   const handleEditClick = (sample) => {
@@ -134,8 +146,10 @@ const SamplesView = ({ token }) => {
       </button>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedSample ? 'Edit Sample' : 'Create Sample'} size="lg">
-        <SampleForm sample={selectedSample} onSubmit={selectedSample ? handleUpdate : handleCreate} onCancel={() => setIsModalOpen(false)} />
+        <SampleForm sample={selectedSample} drillholes={drillholes} onSubmit={selectedSample ? handleUpdate : handleCreate} onCancel={() => setIsModalOpen(false)} />
       </Modal>
+
+      <button onClick={() => downloadCsv('samples.csv', samples)} disabled={!samples.length} className="mb-4 ml-2 inline-flex items-center gap-2 rounded-lg border border-white/50 bg-white px-4 py-3 font-semibold text-teal-900 disabled:opacity-50"><Download size={18} />Export CSV</button>
 
       {samples.length > 0 ? (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">

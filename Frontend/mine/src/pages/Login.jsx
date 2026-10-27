@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/authContext'; 
 import axios from 'axios';
 import { User, Lock } from 'lucide-react';
-import { FcGoogle } from 'react-icons/fc';
 import MineImg from '../assets/Mine.jpg'; // Import image from assets
 
 const Login = () => {
@@ -12,29 +11,22 @@ const Login = () => {
   const [error, setError] = useState(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:5000/users/login', { email, password });
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/users/login`, { email, password });
 
       if (response.data.success) {
-        login(response.data.user);
-        localStorage.setItem('token', response.data.token);
-
-        if (response.data.success) navigate('/Main-dashboard');
-        else navigate('/projects/dashboard');
+        login(response.data.user, response.data.token);
+        navigate('/Main-dashboard');
       } else {
         setError('Invalid credentials');
       }
     } catch (err) {
-      console.error(err);
-      setError('Login failed! Please check your credentials.');
+      setError(err.response?.data?.error || 'Login failed. Check your email and password.');
     }
-  };
-
-  const handleGoogleLogin = () => {
-    alert('Login with Google functionality goes here.');
   };
 
   return (
@@ -51,6 +43,7 @@ const Login = () => {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white tracking-wide">Login</h1>
         </div>
+        {location.state?.registered && <p role="status" className="mb-4 rounded-lg bg-teal-900/70 p-3 text-center text-sm text-white">Account created. Sign in to continue.</p>}
 
         {/* Form */}
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -95,27 +88,12 @@ const Login = () => {
           </button>
         </form>
 
-        {/* OR Divider */}
-        <div className="flex items-center justify-center text-white/50 mt-6">
-          <hr className="w-16 border-white/30" />
-          <span className="mx-2 text-sm">OR</span>
-          <hr className="w-16 border-white/30" />
-        </div>
-
-        {/* Google Login */}
-        <button
-          onClick={handleGoogleLogin}
-          className="flex items-center justify-center w-full bg-white/100 text-teal-900 font-semibold py-2 rounded-full shadow-md hover:shadow-lg transition-all duration-200 gap-3 mt-4"
-        >
-          <FcGoogle size={20} /> Sign up with Google
-        </button>
-
         {/* Register Link */}
         <div className="text-center text-white/100 mt-6 text-sm">
           Don't have an account?{' '}
-          <button className="text-white font-semibold hover:text-teal-300 transition-colors">
+          <Link to="/register" className="text-white font-semibold hover:text-teal-300 transition-colors">
             Register
-          </button>
+          </Link>
         </div>
       </div>
     </div>
